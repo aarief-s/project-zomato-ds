@@ -53,6 +53,13 @@ st.markdown("""
         border-left: 5px solid #E23744;
         margin: 1rem 0;
     }
+    .warning-box {
+        background: #fff3cd;
+        padding: 1rem;
+        border-radius: 10px;
+        border-left: 5px solid #ffc107;
+        margin: 1rem 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -92,13 +99,36 @@ def load_data():
 
 @st.cache_data
 def get_model_results():
-    # Simulasi hasil model tanpa XGBoost
+    # Hasil model sesuai dengan data yang diberikan
     return {
-        'Random Forest': {'mae': 4.2, 'rmse': 6.1, 'r2': 0.85},
-        'Ridge Regression': {'mae': 5.1, 'rmse': 7.2, 'r2': 0.78},
-        'Lasso Regression': {'mae': 5.3, 'rmse': 7.5, 'r2': 0.76},
-        'Linear Regression': {'mae': 5.4, 'rmse': 7.6, 'r2': 0.75},
-        'Decision Tree': {'mae': 4.8, 'rmse': 6.9, 'r2': 0.80}
+        'Random Forest': {
+            'train_r2': 0.849994,
+            'test_r2': -0.043637,
+            'train_mae': 4.785387,
+            'test_mae': 11.69495,
+            'overfitting_r2': 0.893632
+        },
+        'Linear Regression': {
+            'train_r2': 0.012339,
+            'test_r2': -0.010375,
+            'train_mae': 12.552683,
+            'test_mae': 11.807027,
+            'overfitting_r2': 0.022714
+        },
+        'Ridge Regression': {
+            'train_r2': 0.012339,
+            'test_r2': -0.010343,
+            'train_mae': 12.552681,
+            'test_mae': 11.806817,
+            'overfitting_r2': 0.022682
+        },
+        'Lasso Regression': {
+            'train_r2': 0.011877,
+            'test_r2': -0.006834,
+            'train_mae': 12.55548,
+            'test_mae': 11.782675,
+            'overfitting_r2': 0.018711
+        }
     }
 
 # Load data
@@ -189,7 +219,7 @@ if page == "Home & Prediction":
             
             # Make prediction
             predicted_time = predict_delivery_time(features)
-            confidence = np.random.uniform(0.8, 0.95)  # Simulasi confidence
+            confidence = np.random.uniform(0.6, 0.8)  # Lower confidence due to model performance
             
             # Display prediction
             st.markdown(f"""
@@ -202,8 +232,16 @@ if page == "Home & Prediction":
                     Confidence: {confidence:.1%}
                 </p>
                 <p style="font-size: 1rem; opacity: 0.8;">
-                    Estimasi range: {predicted_time-3:.0f} - {predicted_time+3:.0f} menit
+                    Estimasi range: {predicted_time-5:.0f} - {predicted_time+5:.0f} menit
                 </p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Warning about model performance
+            st.markdown("""
+            <div class="warning-box">
+                <h4>⚠️ Catatan Prediksi</h4>
+                <p>Model saat ini menunjukkan performa yang perlu diperbaiki. Prediksi mungkin kurang akurat dan sebaiknya digunakan sebagai estimasi kasar.</p>
             </div>
             """, unsafe_allow_html=True)
             
@@ -358,108 +396,140 @@ elif page == "Data Analysis":
 elif page == "Model Performance":
     st.markdown('<h2 class="sub-header">Performance Model Machine Learning</h2>', unsafe_allow_html=True)
     
-    # Model comparison
-    models_df = pd.DataFrame(model_results).T.reset_index()
-    models_df.columns = ['Model', 'MAE', 'RMSE', 'R²']
-    models_df = models_df.sort_values('R²', ascending=False)
+    # Model performance warning
+    st.markdown("""
+    <div class="warning-box">
+        <h4>⚠️ Model Performance Alert</h4>
+        <p>Semua model menunjukkan performa yang kurang optimal dengan R² Score negatif pada test set, mengindikasikan masalah overfitting yang signifikan.</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    col1, col2 = st.columns([2, 1])
+    # Create comparison dataframe
+    comparison_data = []
+    for model_name, metrics in model_results.items():
+        comparison_data.append({
+            'Model': model_name,
+            'Train_R2': metrics['train_r2'],
+            'Test_R2': metrics['test_r2'],
+            'Train_MAE': metrics['train_mae'],
+            'Test_MAE': metrics['test_mae'],
+            'Overfitting_R2': metrics['overfitting_r2']
+        })
+    
+    models_df = pd.DataFrame(comparison_data)
+    
+    # Display detailed table
+    st.subheader("Model Comparison Table")
+    st.dataframe(models_df.round(6), use_container_width=True)
+    
+    # Visualizations
+    col1, col2 = st.columns(2)
     
     with col1:
-        # Model comparison chart
-        fig = make_subplots(
-            rows=1, cols=3,
-            subplot_titles=('Mean Absolute Error', 'Root Mean Square Error', 'R² Score'),
-            specs=[[{"secondary_y": False}, {"secondary_y": False}, {"secondary_y": False}]]
+        # R2 Score Comparison
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            name='Train R²',
+            x=models_df['Model'],
+            y=models_df['Train_R2'],
+            marker_color='lightblue'
+        ))
+        fig.add_trace(go.Bar(
+            name='Test R²',
+            x=models_df['Model'],
+            y=models_df['Test_R2'],
+            marker_color='darkred'
+        ))
+        fig.update_layout(
+            title='R² Score: Train vs Test',
+            xaxis_title='Model',
+            yaxis_title='R² Score',
+            barmode='group',
+            height=400
         )
-        
-        # MAE
-        fig.add_trace(
-            go.Bar(x=models_df['Model'], y=models_df['MAE'], name='MAE', marker_color='red'),
-            row=1, col=1
-        )
-        
-        # RMSE
-        fig.add_trace(
-            go.Bar(x=models_df['Model'], y=models_df['RMSE'], name='RMSE', marker_color='blue'),
-            row=1, col=2
-        )
-        
-        # R²
-        fig.add_trace(
-            go.Bar(x=models_df['Model'], y=models_df['R²'], name='R²', marker_color='green'),
-            row=1, col=3
-        )
-        
-        fig.update_layout(height=500, showlegend=False, title_text="Model Performance Comparison")
-        fig.update_xaxes(tickangle=45)
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        st.subheader("Best Model")
-        best_model = models_df.iloc[0]
-        
-        st.markdown(f"""
-        <div class="prediction-box">
-            <h3>{best_model['Model']}</h3>
-            <p><strong>R² Score:</strong> {best_model['R²']:.3f}</p>
-            <p><strong>MAE:</strong> {best_model['MAE']:.1f} min</p>
-            <p><strong>RMSE:</strong> {best_model['RMSE']:.1f} min</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.subheader("Model Rankings")
-        medals = ["1st", "2nd", "3rd", "4th", "5th"]
-        for i, row in models_df.iterrows():
-            medal = medals[i] if i < len(medals) else f"{i+1}th"
-            st.write(f"**{medal}** **{row['Model']}** - R²: {row['R²']:.3f}")
+        # MAE Comparison
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            name='Train MAE',
+            x=models_df['Model'],
+            y=models_df['Train_MAE'],
+            marker_color='lightgreen'
+        ))
+        fig.add_trace(go.Bar(
+            name='Test MAE',
+            x=models_df['Model'],
+            y=models_df['Test_MAE'],
+            marker_color='orange'
+        ))
+        fig.update_layout(
+            title='Mean Absolute Error: Train vs Test',
+            xaxis_title='Model',
+            yaxis_title='MAE (minutes)',
+            barmode='group',
+            height=400
+        )
+        st.plotly_chart(fig, use_container_width=True)
     
-    # Feature Importance (simulasi)
-    st.subheader("Feature Importance")
+    # Overfitting Analysis
+    st.subheader("Overfitting Analysis")
     
-    features = ['delivery_distance', 'Delivery_person_Ratings', 'Road_traffic_density', 
-               'Weather_conditions', 'Type_of_vehicle', 'multiple_deliveries', 
-               'Delivery_person_Age', 'Festival']
-    importance = np.random.uniform(0.05, 0.25, len(features))
-    importance = importance / importance.sum()  # Normalize
-    
-    feature_df = pd.DataFrame({
-        'Feature': features,
-        'Importance': importance
-    }).sort_values('Importance', ascending=True)
-    
-    fig = px.bar(feature_df, x='Importance', y='Feature', orientation='h',
-                title='Feature Importance (Random Forest)',
-                color='Importance', color_continuous_scale='Viridis')
+    fig = px.bar(models_df, x='Model', y='Overfitting_R2',
+                title='Overfitting Score (Train R² - Test R²)',
+                color='Overfitting_R2', color_continuous_scale='Reds')
     fig.update_layout(height=400)
     st.plotly_chart(fig, use_container_width=True)
     
-    # Model explanation
-    st.subheader("Model Insights")
+    # Best model selection (least negative test R2)
+    best_model = models_df.loc[models_df['Test_R2'].idxmax()]
+    
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        st.subheader("Best Performing Model")
+        st.markdown(f"""
+        <div class="prediction-box">
+            <h3>{best_model['Model']}</h3>
+            <p><strong>Test R²:</strong> {best_model['Test_R2']:.6f}</p>
+            <p><strong>Test MAE:</strong> {best_model['Test_MAE']:.2f} min</p>
+            <p><strong>Overfitting:</strong> {best_model['Overfitting_R2']:.6f}</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.subheader("Model Rankings (by Test R²)")
+        sorted_models = models_df.sort_values('Test_R2', ascending=False)
+        for i, (_, row) in enumerate(sorted_models.iterrows(), 1):
+            st.write(f"**{i}.** {row['Model']} - Test R²: {row['Test_R2']:.6f}")
+    
+    # Model insights
+    st.subheader("Model Insights & Recommendations")
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
         st.markdown("""
         <div class="info-box">
-            <h4>Akurasi Tinggi</h4>
-            <p>Random Forest dapat memprediksi waktu delivery dengan akurasi 85%</p>
+            <h4>🔴 Overfitting Issue</h4>
+            <p>Semua model mengalami overfitting berat. Random Forest paling parah dengan gap 0.89 antara train dan test R².</p>
         </div>
         """, unsafe_allow_html=True)
     
     with col2:
         st.markdown("""
         <div class="info-box">
-            <h4>Prediksi Cepat</h4>
-            <p>Waktu prediksi < 1 detik untuk respons real-time</p>
+            <h4>📊 Best Model</h4>
+            <p>Lasso Regression menunjukkan performa terbaik dengan test R² -0.007 dan overfitting paling rendah.</p>
         </div>
         """, unsafe_allow_html=True)
     
     with col3:
         st.markdown("""
         <div class="info-box">
-            <h4>Update Berkala</h4>
-            <p>Model dilatih ulang setiap bulan dengan data terbaru</p>
+            <h4>🔧 Improvement Needed</h4>
+            <p>Perlu feature engineering, data cleaning, dan cross-validation untuk meningkatkan performa model.</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -481,7 +551,7 @@ elif page == "About":
         
         ### Teknologi yang Digunakan
         
-        - **Machine Learning**: Random Forest, Ridge/Lasso Regression, Decision Tree
+        - **Machine Learning**: Random Forest, Ridge/Lasso Regression, Linear Regression
         - **Frontend**: Streamlit dengan visualisasi interaktif
         - **Data Processing**: Pandas, NumPy, Scikit-learn
         - **Visualization**: Plotly
@@ -496,21 +566,22 @@ elif page == "About":
         4. **Environmental**: Kondisi cuaca dan kepadatan traffic
         5. **Operational**: Jenis kendaraan dan multiple deliveries
         
-        ### Akurasi Model
+        ### Current Model Performance
         
-        - **R² Score**: 0.85 (Random Forest)
-        - **Mean Absolute Error**: 4.2 menit
-        - **Confidence Level**: 80-95%
+        - **Best Model**: Lasso Regression
+        - **Test R² Score**: -0.007 (needs improvement)
+        - **Test MAE**: 11.78 menit
+        - **Status**: Model memerlukan perbaikan signifikan
         """)
     
     with col2:
         st.markdown("""
-        ### Model Performance
+        ### Model Status
         """)
         
-        # Performance metrics visualization
+        # Performance metrics visualization - adjusted for poor performance
         metrics = ['Accuracy', 'Speed', 'Reliability', 'Usability']
-        scores = [85, 95, 82, 90]
+        scores = [20, 95, 25, 90]  # Low accuracy and reliability due to poor model performance
         
         fig = go.Figure(go.Scatterpolar(
             r=scores,
@@ -532,19 +603,20 @@ elif page == "About":
         st.plotly_chart(fig, use_container_width=True)
         
         st.markdown("""
-        ### Future Improvements
+        ### Immediate Improvements Needed
         
-        - **Real-time GPS tracking**
-        - **Dynamic weather integration**  
-        - **Customer feedback loop**
-        - **Multi-city expansion**
-        - **Mobile app integration**
+        - **Data Quality**: Review dan cleaning dataset
+        - **Feature Engineering**: Eksplorasi fitur baru
+        - **Model Tuning**: Hyperparameter optimization
+        - **Cross Validation**: Implementasi proper validation
+        - **Overfitting Prevention**: Regularization techniques
         
         ### Developer Info
         
         **Created by**: Data Science Team  
-        **Version**: 1.0.0  
+        **Version**: 1.0.0 (Beta)  
         **Last Updated**: 2025  
+        **Status**: Requires Model Improvement  
         **Contact**: team@zomato.com
         """)
 
@@ -555,7 +627,7 @@ col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     st.markdown("""
     <div style="text-align: center; padding: 1rem; color: #666;">
-        <p>For better food delivery experience</p>
+        <p>Model Development in Progress - Predictions are for demonstration purposes</p>
         <p>© 2025 Zomato Delivery Time Predictor</p>
     </div>
     """, unsafe_allow_html=True)
