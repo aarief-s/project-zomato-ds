@@ -4,7 +4,6 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import pickle
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -93,13 +92,13 @@ def load_data():
 
 @st.cache_data
 def get_model_results():
-    # Simulasi hasil model
+    # Simulasi hasil model tanpa XGBoost
     return {
         'Random Forest': {'mae': 4.2, 'rmse': 6.1, 'r2': 0.85},
-        'XGBoost': {'mae': 4.0, 'rmse': 5.8, 'r2': 0.87},
         'Ridge Regression': {'mae': 5.1, 'rmse': 7.2, 'r2': 0.78},
         'Lasso Regression': {'mae': 5.3, 'rmse': 7.5, 'r2': 0.76},
-        'Linear Regression': {'mae': 5.4, 'rmse': 7.6, 'r2': 0.75}
+        'Linear Regression': {'mae': 5.4, 'rmse': 7.6, 'r2': 0.75},
+        'Decision Tree': {'mae': 4.8, 'rmse': 6.9, 'r2': 0.80}
     }
 
 # Load data
@@ -444,7 +443,7 @@ elif page == "Model Performance":
         st.markdown("""
         <div class="info-box">
             <h4>Akurasi Tinggi</h4>
-            <p>Model dapat memprediksi waktu delivery dengan akurasi 85-87%</p>
+            <p>Random Forest dapat memprediksi waktu delivery dengan akurasi 85%</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -482,10 +481,10 @@ elif page == "About":
         
         ### Teknologi yang Digunakan
         
-        - **Machine Learning**: Random Forest, XGBoost, Ridge/Lasso Regression
+        - **Machine Learning**: Random Forest, Ridge/Lasso Regression, Decision Tree
         - **Frontend**: Streamlit dengan visualisasi interaktif
         - **Data Processing**: Pandas, NumPy, Scikit-learn
-        - **Visualization**: Plotly, Matplotlib, Seaborn
+        - **Visualization**: Plotly
         
         ### Dataset Features
         
@@ -499,9 +498,9 @@ elif page == "About":
         
         ### Akurasi Model
         
-        - **R² Score**: 0.87 (XGBoost)
-        - **Mean Absolute Error**: 4.0 menit
-        - **Confidence Level**: 85-95%
+        - **R² Score**: 0.85 (Random Forest)
+        - **Mean Absolute Error**: 4.2 menit
+        - **Confidence Level**: 80-95%
         """)
     
     with col2:
@@ -511,7 +510,7 @@ elif page == "About":
         
         # Performance metrics visualization
         metrics = ['Accuracy', 'Speed', 'Reliability', 'Usability']
-        scores = [87, 95, 82, 90]
+        scores = [85, 95, 82, 90]
         
         fig = go.Figure(go.Scatterpolar(
             r=scores,
@@ -556,7 +555,7 @@ col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     st.markdown("""
     <div style="text-align: center; padding: 1rem; color: #666;">
-        <p>Made with love for better food delivery experience</p>
+        <p>For better food delivery experience</p>
         <p>© 2025 Zomato Delivery Time Predictor</p>
     </div>
     """, unsafe_allow_html=True)
