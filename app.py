@@ -627,7 +627,7 @@ col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     st.markdown("""
     <div style="text-align: center; padding: 1rem; color: #666;">
-        <p>Model Development in Progress - Predictions are for demonstration purposes</p>
+        <p>Predictions are for demonstration purposes</p>
         <p>© 2025 Zomato Delivery Time Predictor</p>
     </div>
     """, unsafe_allow_html=True)
